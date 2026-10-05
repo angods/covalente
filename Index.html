@@ -1,0 +1,849 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Enlace covalente animado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: índice de apartados arriba; escenario animado (canvas) + panel de explicación y controles; apila en pantallas estrechas. Estética fija de laboratorio oscuro. */
+:root {
+  --bg: #0a0f1c;
+  --surface: #121a2c;
+  --fg: #e3e9f4;
+  --muted: #8d9ab3;
+  --line: #243049;
+  --pos: #5091ff;
+  --neg: #fac846;
+  --display: "Literata", Georgia, serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1260px; margin: 0 auto; padding-inline: 18px; padding-block: 22px 36px; display: grid; gap: 16px; }
+header h1 { font-family: var(--display); font-size: clamp(1.5rem, 3vw, 2.1rem); line-height: 1.15; margin: 0 0 4px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 76ch; }
+nav { display: flex; flex-wrap: wrap; gap: 6px; }
+nav button { font-size: 13.5px; padding: 6px 11px; }
+nav button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.main { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 980px) { .main { grid-template-columns: 1fr; } }
+.stage { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #0b1120; }
+canvas { display: block; width: 100%; aspect-ratio: 800 / 480; max-width: 100%; touch-action: pan-y; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 12px; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.panel h2 { font-family: var(--display); font-size: 1.35rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+#body { display: grid; gap: 9px; }
+#body p { margin: 0; max-width: 62ch; }
+#body ol, #body ul { margin: 0; padding-left: 1.2em; display: grid; gap: 3px; }
+.eq { font-family: var(--mono); font-size: 13.5px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; overflow-x: auto; white-space: nowrap; }
+#ctrl { display: grid; gap: 10px; }
+#ctrl:empty { display: none; }
+.grp { display: grid; gap: 6px; }
+.lbl { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+.lbl span { font-family: var(--mono); letter-spacing: 0; text-transform: none; color: var(--fg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font-size: 13px; padding: 5px 10px; }
+.chips button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+input[type=range] { width: 100%; accent-color: var(--pos); }
+.fact { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; display: grid; gap: 4px; }
+.fact:empty { display: none; }
+.fact b { font-family: var(--mono); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button { font: inherit; font-weight: 600; font-size: 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); padding: 8px 13px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: .35; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--pos); outline-offset: 2px; }
+button.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Enlace covalente, en movimiento</h1>
+    <p>Animaciones de cada apartado del tema: enlace de valencia, orbitales moleculares, solapamiento, moléculas diatómicas, hibridación, resonancia y teoría de grupos. Los orbitales se calculan en directo: azul y amarillo son las dos fases (signos) de la función de onda.</p>
+  </header>
+  <nav id="tabs" aria-label="Apartados"></nav>
+  <div class="main">
+    <div class="stage"><canvas id="cv" aria-label="Animación del apartado seleccionado"></canvas></div>
+    <div class="panel" aria-live="polite">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h2 id="title"></h2>
+      <div id="body"></div>
+      <div id="ctrl"></div>
+      <div class="fact" id="fact"></div>
+      <div class="controls">
+        <button id="prev" type="button">← Anterior</button>
+        <button id="next" type="button" class="primary">Siguiente →</button>
+      </div>
+      <div class="key">
+        <span><i style="background:var(--pos)"></i>fase +</span>
+        <span><i style="background:var(--neg)"></i>fase −</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+  const W = 800, H = 480, TAU = Math.PI * 2;
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth || W;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr);
+    const s = cv.width / W; ctx.setTransform(s, 0, 0, s, 0, 0);
+  }
+  window.addEventListener("resize", resize); resize();
+
+  // ---------- utilidades ----------
+  const $ = id => document.getElementById(id);
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  const mix = (a, b, t) => a.map((v, i) => Math.round(lerp(v, b[i], t)));
+  const C = { text: [227, 233, 244], muted: [141, 154, 179], pos: [80, 145, 255], neg: [250, 200, 70], red: [255, 110, 110], green: [110, 225, 140], cyan: [90, 215, 240], violet: [190, 150, 255], line: [60, 74, 104] };
+  const MONO = "JetBrains Mono, ui-monospace, monospace", SANS = "Figtree, system-ui, sans-serif", SERIF = "Literata, Georgia, serif";
+  let time = 0;
+
+  function text(s, x, y, a = 1, c = C.text, size = 13, align = "center", weight = 600, font = SANS) {
+    if (a <= 0) return;
+    ctx.font = `${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = "middle";
+    ctx.fillStyle = rgba(c, a); ctx.fillText(s, x, y);
+  }
+  function glow(x, y, r, c, a) {
+    if (a <= 0) return;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, rgba(c, a)); g.addColorStop(1, rgba(c, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+  function sphere(x, y, r, base, a = 1) {
+    ctx.globalAlpha = a;
+    const hi = mix(base, [255, 255, 255], .65), lo = mix(base, [18, 22, 38], .45);
+    const g = ctx.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+    g.addColorStop(0, rgba(hi, 1)); g.addColorStop(1, rgba(lo, 1));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  function line(x1, y1, x2, y2, c, a = 1, w = 1.5, dash = null) {
+    ctx.strokeStyle = rgba(c, a); ctx.lineWidth = w; ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function spin(x, y, up, c, a = 1, len = 24) {
+    const h = len / 2; ctx.strokeStyle = rgba(c, a); ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y - h);
+    if (up) { ctx.moveTo(x - 4.5, y - h + 6); ctx.lineTo(x, y - h); ctx.lineTo(x + 4.5, y - h + 6); }
+    else { ctx.moveTo(x - 4.5, y + h - 6); ctx.lineTo(x, y + h); ctx.lineTo(x + 4.5, y + h - 6); }
+    ctx.stroke();
+  }
+  function bg() {
+    ctx.fillStyle = "#0b1120"; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(400, 230, 20, 400, 230, 480);
+    g.addColorStop(0, "rgba(40,60,110,.28)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  function caption(a, b, col = C.text) {
+    text(a, 20, 20, 1, C.muted, 11, "left", 700);
+    if (b) text(b, 20, 42, 1, col, 18, "left", 700, SERIF);
+  }
+  const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+  const sup = n => String(n).split("").map(d => SUP[d]).join("");
+
+  // ---------- campos (funciones de onda en 2D) ----------
+  const pool = {};
+  function off(w, h) {
+    const k = w + "x" + h;
+    if (!pool[k]) { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); pool[k] = { c, x, img: x.createImageData(w, h), vals: new Float32Array(w * h) }; }
+    return pool[k];
+  }
+  function field(fn, box, world, o = {}) {
+    const gw = o.gw || 220, gh = Math.max(2, Math.round(gw * box.h / box.w));
+    const P = off(gw, gh), d = P.img.data, vals = P.vals;
+    let mx = 1e-9;
+    for (let j = 0; j < gh; j++) {
+      const y = world.y1 - (j + .5) / gh * (world.y1 - world.y0);
+      for (let i = 0; i < gw; i++) {
+        const x = world.x0 + (i + .5) / gw * (world.x1 - world.x0);
+        const v = fn(x, y); vals[j * gw + i] = v; const a = Math.abs(v); if (a > mx) mx = a;
+      }
+    }
+    if (o.max) mx = o.max;
+    const gam = o.gamma || .6, al = o.alpha || 235;
+    for (let k = 0; k < gw * gh; k++) {
+      const v = vals[k];
+      const c = o.mode === "dens" ? (o.col || [110, 180, 255]) : v >= 0 ? (o.pos || C.pos) : (o.neg || C.neg);
+      const a = Math.min(1, Math.pow(Math.abs(v) / mx, gam));
+      d[k * 4] = c[0]; d[k * 4 + 1] = c[1]; d[k * 4 + 2] = c[2]; d[k * 4 + 3] = Math.round(a * al);
+    }
+    P.x.putImageData(P.img, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(P.c, box.x, box.y, box.w, box.h);
+    return mx;
+  }
+  const toS = (box, world, x, y) => [box.x + (x - world.x0) / (world.x1 - world.x0) * box.w, box.y + (world.y1 - y) / (world.y1 - world.y0) * box.h];
+
+  // ---------- panel: controles ----------
+  const ctrl = $("ctrl");
+  let uid = 0;
+  const UI = {
+    clear() { ctrl.innerHTML = ""; },
+    chips(label, items, active, onPick, group) {
+      const g = group || "g" + (uid++);
+      const wrap = document.createElement("div"); wrap.className = "grp";
+      if (label) { const l = document.createElement("div"); l.className = "lbl"; l.textContent = label; wrap.appendChild(l); }
+      const row = document.createElement("div"); row.className = "chips";
+      items.forEach((it, i) => {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = it; b.dataset.g = g;
+        if (i === active) b.classList.add("on");
+        b.addEventListener("click", () => { ctrl.querySelectorAll(`button[data-g="${g}"]`).forEach(x => x.classList.remove("on")); b.classList.add("on"); onPick(i); });
+        row.appendChild(b);
+      });
+      wrap.appendChild(row); ctrl.appendChild(wrap); return row;
+    },
+    slider(label, min, max, step, val, onInput, fmt) {
+      const wrap = document.createElement("div"); wrap.className = "grp";
+      const id = "sl" + (uid++);
+      const l = document.createElement("label"); l.className = "lbl"; l.htmlFor = id; l.textContent = label;
+      const sp = document.createElement("span"); sp.textContent = fmt(val); l.appendChild(sp);
+      const inp = document.createElement("input"); inp.type = "range"; inp.id = id; inp.min = min; inp.max = max; inp.step = step; inp.value = val;
+      inp.addEventListener("input", () => { sp.textContent = fmt(+inp.value); onInput(+inp.value); });
+      wrap.appendChild(l); wrap.appendChild(inp); ctrl.appendChild(wrap);
+      return { set(v) { inp.value = v; sp.textContent = fmt(v); } };
+    }
+  };
+  const setFact = h => { $("fact").innerHTML = h; };
+
+  // =====================================================================
+  // 1. H₂ según la teoría EV
+  // =====================================================================
+  const EV = [["Electrostática", 0.25, 90], ["Heitler-London (canje)", 3.14, 86.9], ["Apantallamiento", 3.78, 74.3], ["Polarización de los OA", 4.04, 74], ["Formas iónicas", 4.12, 75], ["Coolidge-James", 4.7467, 74.127], ["Experimental", 4.746, 74.1]];
+  const mEV = {
+    nav: "H₂ (EV)", eyebrow: "Teoría del enlace de valencia", title: "Dos átomos de H se acercan y forman H₂",
+    body: `<p>La teoría EV parte de dos átomos separados (E = 2E₀) y los acerca. Al solaparse los orbitales 1s aparecen atracciones electrostáticas (integral de Coulomb Q) y, sobre todo, el <b>canje</b> de los dos electrones indistinguibles (integral J).</p>
+      <div class="eq">Ψ = φA(1)φB(2) + φA(2)φB(1) &nbsp;→&nbsp; E₊ = 2E₀ + (Q + J)/(1 + S²)</div>
+      <p>Como J &lt; 0 y |J| ≫ |Q|, la función simétrica Ψ₊ baja mucho la energía: el enlace se debe al apareamiento de dos electrones con espines opuestos. Cada mejora de la función de prueba acerca la curva a la experimental.</p>`,
+    sel: 1, manual: false, R: 310, start: 0,
+    V(R, d) { const x = 1 - Math.exp(-0.0194 * (R - d[2])); return d[1] * (x * x - 1); },
+    fact() {
+      const d = EV[this.sel];
+      setFact(`<span><b>${d[0]}</b> · D = ${d[1]} eV · Rₑ = ${d[2]} pm</span><span>Experimental: 4,75 eV y 74,1 pm. Este modelo recupera el ${Math.round(d[1] / 4.746 * 100)} % de la energía de enlace.</span>`);
+    },
+    init() {
+      this.start = time; this.manual = false;
+      UI.chips("Función de prueba (tabla 2.1)", EV.map(d => d[0]), this.sel, i => { this.sel = i; this.manual = false; this.start = time; this.fact(); });
+      this.sl = UI.slider("Distancia R (arrastra para moverla tú)", 40, 320, 1, 310, v => { this.manual = true; this.R = v; }, v => Math.round(v) + " pm");
+      this.fact();
+    },
+    draw() {
+      const d = EV[this.sel];
+      let R;
+      if (this.manual) R = this.R;
+      else {
+        const t = time - this.start;
+        R = lerp(310, d[2], ease(seg(t, 0, 3))) + Math.sin(time * 6) * 6 * seg(t, 3, 3.6);
+        this.sl.set(Math.round(R));
+      }
+      caption("TEORÍA EV · MOLÉCULA H₂", d[0], C.cyan);
+      const box = { x: 100, y: 58, w: 600, h: 220 }, world = { x0: -300, x1: 300, y0: -110, y1: 110 };
+      field((x, y) => { const v = Math.exp(-Math.hypot(x + R / 2, y) / 53) + Math.exp(-Math.hypot(x - R / 2, y) / 53); return v * v; }, box, world, { mode: "dens", max: 1.6, gamma: .5, col: [110, 185, 255] });
+      const [ax, ay] = toS(box, world, -R / 2, 0), [bx] = toS(box, world, R / 2, 0);
+      [ax, bx].forEach((x, i) => { sphere(x, ay, 4.5, [255, 255, 255]); text(i ? "H_B" : "H_A", x, ay + 22, .85, C.text, 12); });
+      const b = clamp((230 - R) / (230 - d[2]));
+      const mx = (ax + bx) / 2;
+      spin(lerp(ax, mx, b) - 9 * b, ay - 34, true, [255, 215, 90]);
+      spin(lerp(bx, mx, b) + 9 * b, ay - 34, false, [255, 215, 90]);
+      text(b > .85 ? "par de electrones compartido (espines opuestos)" : "un electrón en cada átomo", 400, box.y - 8, .8, C.muted, 12);
+      line(ax, box.y + box.h - 6, bx, box.y + box.h - 6, C.muted, .6, 1);
+      text("R = " + Math.round(R) + " pm", mx, box.y + box.h + 8, .9, C.text, 12, "center", 600, MONO);
+
+      // curva de energía
+      const g = { x: 130, y: 312, w: 540, h: 150 };
+      const X = r => g.x + (r - 30) / 290 * g.w, Y = e => g.y + (1.5 - e) / 6.7 * g.h;
+      line(g.x, g.y, g.x, g.y + g.h, C.muted, .5); line(g.x, Y(0), g.x + g.w, Y(0), C.muted, .5, 1, [4, 5]);
+      text("E (eV)", g.x - 8, g.y + 4, .7, C.muted, 11, "right");
+      [0, -2, -4].forEach(e => text(String(e).replace("-", "−"), g.x - 8, Y(e), .6, C.muted, 10.5, "right", 500, MONO));
+      [50, 100, 150, 200, 250, 300].forEach(r => text(String(r), X(r), g.y + g.h + 10, .55, C.muted, 10.5, "center", 500, MONO));
+      text("R (pm)", g.x + g.w + 6, g.y + g.h + 10, .7, C.muted, 11, "left");
+      const curve = (dd, col, a, dash) => {
+        ctx.strokeStyle = rgba(col, a); ctx.lineWidth = 2; ctx.setLineDash(dash || []);
+        ctx.beginPath(); let on = false;
+        for (let r = 30; r <= 320; r += 2) { const e = this.V(r, dd); if (e > 1.5) { on = false; continue; } const p = [X(r), Y(e)]; on ? ctx.lineTo(...p) : ctx.moveTo(...p); on = true; }
+        ctx.stroke(); ctx.setLineDash([]);
+      };
+      if (this.sel !== 6) { curve(EV[6], C.muted, .6, [5, 5]); text("experimental", X(88), Y(-4.75) + 12, .6, C.muted, 10.5, "left"); }
+      curve(d, C.cyan, 1);
+      line(X(d[2]), Y(0), X(d[2]), Y(-d[1]), C.cyan, .5, 1, [2, 3]);
+      text("D = " + d[1] + " eV", X(d[2]) + 8, Y(-d[1] / 2), .9, C.cyan, 11.5, "left", 600, MONO);
+      const e = this.V(R, d);
+      if (e <= 1.5) { glow(X(R), Y(e), 16, [255, 215, 90], .7); sphere(X(R), Y(e), 5, [255, 215, 90]); }
+    }
+  };
+
+  // =====================================================================
+  // 2. OM: enlazante y antienlazante (CLOA)
+  // =====================================================================
+  const mOM = {
+    nav: "OM enlazante / antienlazante", eyebrow: "Teoría de orbitales moleculares (CLOA)", title: "Dos orbitales atómicos dan dos orbitales moleculares",
+    body: `<p>En la aproximación CLOA cada OM es una combinación de OA: Ψ = c₁φ₁ + c₂φ₂. Resolver el determinante secular da dos soluciones:</p>
+      <div class="eq">Ψ₊ = (φ₁ + φ₂)/√(2(1+S)) &nbsp;&nbsp; Ψ₋ = (φ₁ − φ₂)/√(2(1−S))</div>
+      <p>Ψ₊ acumula densidad electrónica entre los núcleos (enlazante). Ψ₋ tiene un plano nodal entre ellos y concentra la carga fuera (antienlazante).</p>
+      <p>Si los átomos son distintos (heteronuclear), el OM enlazante se parece más al OA del átomo más electronegativo y el antienlazante al del menos electronegativo. Mueve el deslizador para verlo.</p>`,
+    type: 0, delta: 0, c1: .707, c2: .707,
+    target() {
+      const D = this.delta, s = Math.sqrt(D * D / 4 + 1);
+      const E = this.type === 0 ? -s : s;
+      let c1 = 1, c2 = (D / 2 - E);
+      const n = Math.hypot(c1, c2); return { c1: c1 / n, c2: c2 / n, E, s };
+    },
+    fact() {
+      const t = this.target();
+      setFact(`<span><b>${this.type === 0 ? "Ψ₊" : "Ψ₋"}</b> · c₁ = ${t.c1.toFixed(2)} · c₂ = ${t.c2.toFixed(2)}</span>
+        <span>El electrón pasa el ${Math.round(t.c1 * t.c1 * 100)} % del tiempo en A y el ${Math.round(t.c2 * t.c2 * 100)} % en B.</span>
+        <span>${this.delta < .05 ? "Homonuclear: se reparte por igual." : this.type === 0 ? "Enlazante: domina el OA de B, el átomo más electronegativo." : "Antienlazante: domina el OA de A, el menos electronegativo."}</span>`);
+    },
+    init() {
+      UI.chips("Orbital molecular", ["Ψ₊ enlazante", "Ψ₋ antienlazante"], this.type, i => { this.type = i; this.fact(); });
+      UI.slider("Diferencia de energía entre los OA (0 = homonuclear)", 0, 3, .05, this.delta, v => { this.delta = v; this.fact(); }, v => v.toFixed(2) + " |β|");
+      this.fact();
+    },
+    draw(dt) {
+      const t = this.target(), k = reduce ? 1 : 1 - Math.exp(-dt * 4);
+      this.c1 = lerp(this.c1, t.c1, k); this.c2 = lerp(this.c2, t.c2, k);
+      const c1 = this.c1, c2 = this.c2;
+      caption("CLOA · Ψ = c₁φA + c₂φB", this.type === 0 ? "Ψ₊ enlazante" : "Ψ₋ antienlazante", this.type === 0 ? C.pos : C.neg);
+      const box = { x: 24, y: 58, w: 470, h: 200 }, world = { x0: -4.7, x1: 4.7, y0: -2, y1: 2 };
+      const phi = (x, y, c) => Math.exp(-Math.hypot(x - c, y));
+      field((x, y) => c1 * phi(x, y, -1) + c2 * phi(x, y, 1), box, world, { max: .95, gamma: .55 });
+      [[-1, "A"], [1, "B"]].forEach(([c, n]) => { const [sx, sy] = toS(box, world, c, 0); sphere(sx, sy, 4, [255, 255, 255]); text(n, sx, sy + 20, .8, C.text, 12); });
+      if (Math.abs(c1 * c2) > .05 && c2 < 0) { const xn = Math.log(-c2 / c1) / 2; const [sx] = toS(box, world, xn, 0); line(sx, box.y + 10, sx, box.y + box.h - 10, C.text, .6, 1, [4, 4]); text("plano nodal", sx, box.y + 4, .8, C.text, 11); }
+
+      // perfil de densidad sobre el eje
+      const p = { x: 24, y: 285, w: 470, h: 160 };
+      const PX = x => p.x + (x - world.x0) / (world.x1 - world.x0) * p.w, PY = v => p.y + p.h - v / 1.25 * p.h;
+      line(p.x, p.y + p.h, p.x + p.w, p.y + p.h, C.muted, .5);
+      const N = 160, xs = [], ps = [], ss = [];
+      for (let i = 0; i <= N; i++) { const x = world.x0 + i / N * (world.x1 - world.x0); const a = phi(x, 0, -1), b = phi(x, 0, 1); xs.push(x); ps.push((c1 * a + c2 * b) ** 2); ss.push(c1 * c1 * a * a + c2 * c2 * b * b); }
+      for (let i = 0; i < N; i++) {
+        const gain = ps[i] > ss[i];
+        ctx.fillStyle = rgba(gain ? C.pos : C.red, .35);
+        ctx.beginPath(); ctx.moveTo(PX(xs[i]), PY(ss[i])); ctx.lineTo(PX(xs[i + 1]), PY(ss[i + 1])); ctx.lineTo(PX(xs[i + 1]), PY(ps[i + 1])); ctx.lineTo(PX(xs[i]), PY(ps[i])); ctx.closePath(); ctx.fill();
+      }
+      const plot = (arr, col, dash) => { ctx.strokeStyle = rgba(col, 1); ctx.lineWidth = 2; ctx.setLineDash(dash || []); ctx.beginPath(); arr.forEach((v, i) => i ? ctx.lineTo(PX(xs[i]), PY(v)) : ctx.moveTo(PX(xs[i]), PY(v))); ctx.stroke(); ctx.setLineDash([]); };
+      plot(ss, C.muted, [5, 4]); plot(ps, C.text);
+      text("densidad sobre el eje", p.x, p.y - 4, .8, C.muted, 11, "left", 700);
+      text("— Ψ²    - - átomos por separado", p.x + p.w, p.y - 4, .8, C.muted, 11, "right", 500);
+      text(this.type === 0 ? "gana carga entre los núcleos" : "pierde carga entre los núcleos", PX(0), p.y + 14, .9, this.type === 0 ? C.pos : C.red, 12);
+
+      // diagrama de energía
+      const Ey = E => 250 - E * 62;
+      const D = this.delta, s = t.s;
+      const aoA = Ey(D / 2), aoB = Ey(-D / 2), yb = Ey(-s), ya = Ey(s);
+      line(520, aoA, 570, aoA, C.text, 1, 2.5); line(730, aoB, 780, aoB, C.text, 1, 2.5);
+      text("φA", 545, aoA - 14, .9, C.text, 12); text("φB", 755, aoB - 14, .9, C.text, 12);
+      [[yb, 0], [ya, 1]].forEach(([yy, i]) => {
+        const on = i === this.type, col = i === 0 ? C.pos : C.neg;
+        if (on) glow(650, yy, 60, col, .25);
+        line(610, yy, 690, yy, col, 1, on ? 4 : 2.5);
+        line(570, aoA, 610, yy, C.muted, .5, 1, [3, 4]); line(690, yy, 730, aoB, C.muted, .5, 1, [3, 4]);
+        text(i === 0 ? "Ψ₊" : "Ψ₋", 650, yy + (i === 0 ? 18 : -16), 1, col, 13, "center", 700);
+      });
+      spin(642, yb, true, [255, 215, 90], 1, 20); spin(658, yb, false, [255, 215, 90], 1, 20);
+      line(505, 420, 505, 90, C.muted, .5, 1); text("E", 505, 80, .7, C.muted, 11);
+    }
+  };
+
+  // =====================================================================
+  // 3. Criterios de solapamiento
+  // =====================================================================
+  const mOV = {
+    nav: "Solapamiento", eyebrow: "Criterios de estabilidad de los OM", title: "Cuándo dos orbitales se solapan de verdad",
+    body: `<p>El enlace es más fuerte cuanto mayor es la integral de solapamiento S. Para que S sea grande:</p>
+      <ol><li>Los OA deben tener energías (y tamaños) parecidas.</li><li>Deben estar bien orientados.</li><li>Deben tener la misma simetría respecto al eje de enlace.</li></ol>
+      <p>En la escena, el rojo es la zona donde el producto φA·φB es positivo y el verde donde es negativo. S es la suma de todo: si rojo y verde se compensan, S = 0 y los orbitales son <b>ortogonales</b>.</p>`,
+    mode: 0, manual: false, th: 0, z: 1, refMax: .25,
+    init() {
+      this.manual = false;
+      UI.chips("Qué comparar", ["Simetría: s con p", "Tamaño: s con s"], this.mode, i => { this.mode = i; this.manual = false; this.build(); });
+      this.build();
+    },
+    build() {
+      [...ctrl.children].slice(1).forEach(n => n.remove());
+      if (this.mode === 0) this.sl = UI.slider("Ángulo del orbital p (arrastra para fijarlo)", 0, 360, 1, 0, v => { this.manual = true; this.th = v * Math.PI / 180; }, v => Math.round(v) + "°");
+      else this.sl = UI.slider("Tamaño del orbital s de B (ζ grande = compacto)", .3, 3, .01, 1, v => { this.manual = true; this.z = v; }, v => "ζ = " + v.toFixed(2));
+    },
+    fns() {
+      const xA = -1.5, xB = 1.5, al = Math.PI - this.th, ca = Math.cos(al), sa = Math.sin(al), z = this.z;
+      const fA = (x, y) => Math.exp(-Math.hypot(x - xA, y));
+      const fB = this.mode === 0
+        ? (x, y) => { const dx = x - xB; return 2.3 * (dx * ca + y * sa) * Math.exp(-.85 * Math.hypot(dx, y)); }
+        : (x, y) => Math.exp(-z * Math.hypot(x - xB, y));
+      return { fA, fB };
+    },
+    draw() {
+      if (!this.manual) {
+        if (this.mode === 0) { this.th = (time * .6) % TAU; this.sl.set(Math.round(this.th * 180 / Math.PI)); }
+        else { this.z = 1.4 + 1.1 * Math.sin(time * .7); this.sl.set(+this.z.toFixed(2)); }
+      }
+      const { fA, fB } = this.fns();
+      const box = { x: 40, y: 56, w: 720, h: 290 }, world = { x0: -6, x1: 6, y0: -2.42, y1: 2.42 };
+      field((x, y) => fA(x, y) + fB(x, y), box, world, { max: 1.05, gamma: .6, alpha: 120 });
+      field((x, y) => fA(x, y) * fB(x, y), box, world, { max: this.mode === 0 ? .26 : .3, gamma: .5, alpha: 255, pos: C.red, neg: C.green });
+      // S numérica
+      let a2 = 0, b2 = 0, ab = 0;
+      for (let j = 0; j < 50; j++) for (let i = 0; i < 120; i++) {
+        const x = -6 + (i + .5) / 120 * 12, y = -2.42 + (j + .5) / 50 * 4.84;
+        const a = fA(x, y), b = fB(x, y); a2 += a * a; b2 += b * b; ab += a * b;
+      }
+      const S = ab / Math.sqrt(a2 * b2);
+      const [xa, ya] = toS(box, world, -1.5, 0), [xb] = toS(box, world, 1.5, 0);
+      sphere(xa, ya, 4, [255, 255, 255]); sphere(xb, ya, 4, [255, 255, 255]);
+      text("A · s", xa, box.y + 8, .9, C.text, 13);
+      text(this.mode === 0 ? "B · p" : "B · s (ζ = " + this.z.toFixed(2) + ")", xb, box.y + 8, .9, C.text, 13);
+      line(box.x, ya, box.x + box.w, ya, C.muted, .3, 1, [3, 5]);
+      const ortho = Math.abs(S) < .03;
+      caption(this.mode === 0 ? "SIMETRÍA" : "TAMAÑO Y ENERGÍA", this.mode === 0 ? (ortho ? "Ortogonales: S = 0" : "No ortogonales: S ≠ 0") : (S > .5 ? "Tamaños parecidos: buen solapamiento" : "Tamaños distintos: solapan poco"), ortho ? C.green : C.text);
+      // medidor de S
+      const mx = 400, my = 402, w = 230;
+      ctx.fillStyle = "rgba(255,255,255,.08)"; ctx.fillRect(mx - w, my - 4, 2 * w, 8);
+      ctx.fillStyle = rgba(S >= 0 ? C.red : C.green, .9);
+      ctx.fillRect(Math.min(mx, mx + S * w), my - 4, Math.abs(S * w), 8);
+      line(mx, my - 10, mx, my + 10, C.text, .7, 1);
+      glow(mx + S * w, my, 14, S >= 0 ? C.red : C.green, .6);
+      text("S = " + (S < 0 ? "−" : "") + Math.abs(S).toFixed(2), mx, my + 26, 1, C.text, 17, "center", 700, MONO);
+      text("−1", mx - w - 12, my, .6, C.muted, 11, "right", 500, MONO); text("+1", mx + w + 12, my, .6, C.muted, 11, "left", 500, MONO);
+      text("rojo: φA·φB > 0   verde: φA·φB < 0", mx, my + 50, .7, C.muted, 11.5);
+      if (this.mode === 0) setFact(`<span><b>θ = ${Math.round(this.th * 180 / Math.PI) % 360}°</b> · ${ortho ? "El p queda perpendicular al eje (como un pᵧ): lo que suma un lóbulo lo resta el otro." : Math.abs(S) > .35 ? "El p apunta al s (como un p_z): solapamiento máximo." : "Solapamiento parcial."}</span>`);
+      else setFact(`<span><b>ζ = ${this.z.toFixed(2)}</b> · ${this.z > 1.6 ? "Orbital de B pequeño y compacto (energía muy baja): apenas toca al de A." : this.z < .6 ? "Orbital de B grande y difuso: se reparte lejos y solapa poco." : "Tamaños comparables: la región común es grande."}</span>`);
+    }
+  };
+
+  // =====================================================================
+  // 4. OM σ, π y δ
+  // =====================================================================
+  const SPD = [
+    { n: "σ (s + s)", gu: "g", f: (x, y, d) => Math.exp(-Math.hypot(x + d, y)) + Math.exp(-Math.hypot(x - d, y)), nodes: [], txt: "Sin planos nodales que contengan el eje: simetría cilíndrica." },
+    { n: "σ* (s − s)", gu: "u", f: (x, y, d) => Math.exp(-Math.hypot(x + d, y)) - Math.exp(-Math.hypot(x - d, y)), nodes: ["v"], txt: "Antienlazante: plano nodal perpendicular al eje, entre los núcleos." },
+    { n: "σ (p_z + p_z)", gu: "g", f: (x, y, d) => pz(x, y, -d) - pz(x, y, d), nodes: [], txt: "Los lóbulos que se miran tienen el mismo signo: solapamiento frontal." },
+    { n: "σ* (p_z − p_z)", gu: "u", f: (x, y, d) => pz(x, y, -d) + pz(x, y, d), nodes: ["v"], txt: "Los lóbulos enfrentados tienen signo opuesto: nodo entre los núcleos." },
+    { n: "π (p_x + p_x)", gu: "u", f: (x, y, d) => px(x, y, -d) + px(x, y, d), nodes: ["h"], txt: "Solapamiento lateral. El eje de enlace está en un plano nodal." },
+    { n: "π* (p_x − p_x)", gu: "g", f: (x, y, d) => px(x, y, -d) - px(x, y, d), nodes: ["h", "v"], txt: "Un plano nodal que contiene al eje y otro perpendicular entre los núcleos." },
+    { n: "δ (d_xy + d_xy)", gu: "g", end: true, f: (x, y) => x * y * Math.exp(-.9 * Math.hypot(x, y)), nodes: ["h", "v"], txt: "Vista a lo largo del eje: dos planos nodales perpendiculares que se cortan en el eje." }
+  ];
+  function pz(x, y, c) { return 1.6 * (x - c) * Math.exp(-.8 * Math.hypot(x - c, y)); }
+  function px(x, y, c) { return 1.6 * y * Math.exp(-.8 * Math.hypot(x - c, y)); }
+  const mSPD = {
+    nav: "σ, π y δ", eyebrow: "Tipos de orbitales moleculares", title: "Orbitales σ, π y δ",
+    body: `<p>Se clasifican por los planos nodales que contienen al eje de enlace: <b>σ</b> ninguno (simetría cilíndrica), <b>π</b> uno, <b>δ</b> dos. Los antienlazantes tienen además un plano nodal perpendicular al eje entre los núcleos.</p>
+      <p>Respecto al centro de inversión: <b>g</b> (gerade) si la función tiene el mismo signo en puntos opuestos, <b>u</b> (ungerade) si cambia. σ enlazante es g y π enlazante es u; en los antienlazantes se invierte.</p>
+      <p>Mira cómo se acercan los átomos y cómo las fases iguales se suman y las opuestas se cancelan.</p>`,
+    sel: 0, start: 0,
+    init() { this.start = time; UI.chips("Combinación", SPD.map(s => s.n), this.sel, i => { this.sel = i; this.start = time; this.fact(); }); this.fact(); },
+    fact() { const s = SPD[this.sel]; setFact(`<span><b>${s.n}</b> · ${s.gu === "g" ? "gerade (g)" : "ungerade (u)"}</span><span>${s.txt}</span>`); },
+    draw() {
+      const s = SPD[this.sel];
+      const d = s.end ? 0 : lerp(3.8, 1.3, ease(seg(time - this.start, 0, 2.2)));
+      const box = { x: 40, y: 60, w: 720, h: 300 }, world = { x0: -6.5, x1: 6.5, y0: -2.71, y1: 2.71 };
+      const w2 = s.end ? { x0: -3.9, x1: 3.9, y0: -1.625, y1: 1.625 } : world;
+      field((x, y) => s.f(x, y, d), box, w2, { gamma: .55 });
+      caption(s.end ? "VISTA A LO LARGO DEL EJE DE ENLACE" : "EJE DE ENLACE HORIZONTAL (z)", s.n + " · " + s.gu, s.n.includes("*") ? C.neg : C.pos);
+      const [cx, cy] = toS(box, w2, 0, 0);
+      if (!s.end) {
+        line(box.x, cy, box.x + box.w, cy, C.muted, .35, 1, [3, 5]);
+        [-d, d].forEach((c, i) => { const [sx] = toS(box, w2, c, 0); sphere(sx, cy, 4, [255, 255, 255]); text(i ? "B" : "A", sx, cy + 20, .8, C.text, 12); });
+      } else { sphere(cx, cy, 5, [255, 255, 255]); text("⊙ eje", cx + 30, cy + 16, .8, C.text, 12, "left"); }
+      if (s.nodes.includes("v")) { line(cx, box.y + 6, cx, box.y + box.h - 6, C.text, .75, 1.2, [5, 5]); if (!s.end) text("nodo ⟂ al eje", cx, box.y - 6, .85, C.text, 11.5); }
+      if (s.nodes.includes("h")) { line(box.x + 10, cy, box.x + box.w - 10, cy, C.text, .75, 1.2, [5, 5]); text(s.end ? "planos nodales" : "plano nodal con el eje", box.x + box.w - 12, cy - 12, .85, C.text, 11.5, "right"); }
+      const nc = s.end ? 2 : s.n.startsWith("π") ? 1 : 0;
+      text(`${nc} plano${nc === 1 ? "" : "s"} nodal${nc === 1 ? "" : "es"} que contiene${nc === 1 ? "" : "n"} al eje → ${["σ", "π", "δ"][nc]}`, 400, 400, .95, C.text, 15, "center", 700);
+      text(s.gu === "g" ? "g: mismo signo en puntos opuestos respecto al centro" : "u: signo opuesto en puntos opuestos respecto al centro", 400, 428, .75, C.muted, 12.5);
+    }
+  };
+
+  // =====================================================================
+  // 5. Moléculas diatómicas: diagrama de OM y llenado
+  // =====================================================================
+  const SPEC = [
+    ["Periodo 1", [["H₂⁺", 1, "h"], ["H₂", 2, "h"], ["He₂⁺", 3, "h"], ["He₂", 4, "h", "Orden de enlace 0: He₂ no es estable."]]],
+    ["Periodo 2", [["Li₂", 2, "mix"], ["Be₂", 4, "mix", "Orden de enlace 0: Be₂ no es estable."], ["B₂", 6, "mix", "Paramagnético: dos electrones desapareados en los π."], ["C₂", 8, "mix"], ["N₂", 10, "mix", "HOMO 2σg, LUMO 1πg. Triple enlace."], ["O₂", 12, "nomix", "Paramagnético: la estructura de Lewis no lo predice, la teoría OM sí."], ["F₂", 14, "nomix"], ["Ne₂", 16, "nomix", "Orden de enlace 0: no existe."]]],
+    ["Iones", [["N₂⁺", 9, "mix", "Quitar un electrón enlazante baja el orden de enlace."], ["O₂⁺", 11, "nomix", "Quitar un electrón antienlazante sube el orden: enlace más corto que en O₂."], ["O₂⁻", 13, "nomix", "Superóxido."], ["O₂²⁻", 14, "nomix", "Peróxido: enlace sencillo."]]],
+    ["Heteronucleares", [["CO", 10, "mix", "Isoelectrónica con N₂. El OA del O (más electronegativo) está más bajo.", "C", "O"], ["CN⁻", 10, "mix", "Isoelectrónico con N₂ y CO.", "C", "N"], ["NO⁺", 10, "mix", "Isoelectrónico con N₂: orden 3.", "N", "O"], ["NO", 11, "nomix", "Un electrón desapareado en un π*.", "N", "O"], ["NO⁻", 12, "nomix", "Problema 2: orden 2 (menor que 2,5 en NO), enlace más largo, 2 electrones desapareados en los π*. Como los π* tienen más carácter del átomo menos electronegativo, pasan más tiempo cerca del N.", "N", "O"]]],
+    ["Periodo 3 (problema 1)", [["Na₂", 2, "mix", null, null, null, 3], ["Mg₂", 4, "mix", null, null, null, 3], ["Al₂", 6, "mix", null, null, null, 3], ["Si₂", 8, "mix", null, null, null, 3], ["P₂", 10, "mix", "Triple enlace en P₂, pero el P prefiere P₄ con enlaces sencillos: los π entre orbitales 3p solapan mal.", null, null, 3], ["S₂", 12, "nomix", "S₂ tiene doble enlace; el S prefiere S₈ con enlaces sencillos por el mal solapamiento π 3p–3p.", null, null, 3], ["Cl₂", 14, "nomix", null, null, null, 3]]]
+  ];
+  function levelsFor(kind, sh) {
+    if (kind === "h") return [{ id: "1σg", lab: "σ1s", deg: 1, y: 340, b: 1, ao: "s" }, { id: "1σu", lab: "σ*1s", deg: 1, y: 196, b: -1, ao: "s" }];
+    const L = (id, lab, deg, y, b, ao) => ({ id, lab: lab.replace("#", sh), deg, y, b, ao });
+    return kind === "mix"
+      ? [L("1σg", "σ#s", 1, 420, 1, "s"), L("1σu", "σ*#s", 1, 362, -1, "s"), L("1πu", "π#p", 2, 240, 1, "p"), L("2σg", "σ#p", 1, 206, 1, "p"), L("1πg", "π*#p", 2, 148, -1, "p"), L("2σu", "σ*#p", 1, 94, -1, "p")]
+      : [L("1σg", "σ#s", 1, 420, 1, "s"), L("1σu", "σ*#s", 1, 362, -1, "s"), L("2σg", "σ#p", 1, 250, 1, "p"), L("1πu", "π#p", 2, 212, 1, "p"), L("1πg", "π*#p", 2, 148, -1, "p"), L("2σu", "σ*#p", 1, 94, -1, "p")];
+  }
+  const mDI = {
+    nav: "Moléculas diatómicas", eyebrow: "Diagramas de OM", title: "Llenado de orbitales moleculares",
+    body: `<p>Con N orbitales atómicos se forman N orbitales moleculares. Los electrones se colocan por orden de energía (aufbau), con un máximo de dos por orbital (Pauli) y ocupando por separado los orbitales degenerados antes de aparearse (Hund).</p>
+      <div class="eq">O.E. = (nº e⁻ enlazantes − nº e⁻ antienlazantes) / 2</div>
+      <p>De Li₂ a N₂ los orbitales 2s y 2p_z se mezclan (mezcla s–p) y el 2σg queda por encima de los 1πu. En O₂ y F₂ la diferencia s–p es mayor, la mezcla casi desaparece y el orden se invierte.</p>`,
+    sp: [1, 6], start: 0,
+    init() {
+      this.start = time;
+      SPEC.forEach(([g, list], gi) => UI.chips(g, list.map(s => s[0]), gi === this.sp[0] ? this.sp[1] : -1, i => { this.sp = [gi, i]; this.start = time; this.fact(); }, "sp"));
+      this.fact();
+    },
+    cur() { const s = SPEC[this.sp[0]][1][this.sp[1]]; return { n: s[0], e: s[1], kind: s[2], note: s[3], L: s[4] || null, R: s[5] || null, sh: s[6] || (s[2] === "h" ? 1 : 2) }; },
+    fill(sp) {
+      const lv = levelsFor(sp.kind, sp.sh), slots = [];
+      lv.forEach((l, li) => { for (const up of [true, false]) for (let k = 0; k < l.deg; k++) slots.push({ li, k, up }); });
+      const occ = lv.map(l => Array.from({ length: l.deg }, () => 0));
+      slots.slice(0, sp.e).forEach(s => occ[s.li][s.k]++);
+      let b = 0, a = 0, un = 0;
+      lv.forEach((l, li) => occ[li].forEach(n => { if (l.b > 0) b += n; else a += n; if (n === 1) un++; }));
+      let homo = -1; lv.forEach((l, li) => { if (occ[li].some(n => n > 0)) homo = li; });
+      return { lv, slots, occ, b, a, un, oe: (b - a) / 2, homo };
+    },
+    fact() {
+      const sp = this.cur(), f = this.fill(sp);
+      const conf = (sp.sh === 2 ? "KK " : sp.sh === 3 ? "KK LL " : "") + f.lv.map((l, li) => { const n = f.occ[li].reduce((x, y) => x + y, 0); return n ? l.id + sup(n) : ""; }).filter(Boolean).join(" ");
+      const oe = Number.isInteger(f.oe) ? f.oe : f.oe.toFixed(1).replace(".", ",");
+      setFact(`<span><b>${sp.n}</b> · ${sp.e} e⁻ de valencia · O.E. = (${f.b} − ${f.a})/2 = <b>${oe}</b></span><span>${conf}</span><span>${f.un} e⁻ desapareado${f.un === 1 ? "" : "s"} · ${f.un ? "paramagnética" : "diamagnética"}</span>${sp.note ? `<span>${sp.note}</span>` : ""}`);
+    },
+    draw() {
+      const sp = this.cur(), f = this.fill(sp);
+      const het = sp.L && sp.L !== sp.R;
+      const aoY = sp.kind === "h" ? { s: 268 } : { s: 392, p: 180 };
+      const off = het ? 18 : 0;
+      const el = (sp.n.match(/^[A-Z][a-z]?/) || ["X"])[0];
+      const Ln = sp.L || el, Rn = sp.R || el;
+      const shl = sp.sh;
+      const oe = Number.isInteger(f.oe) ? f.oe : f.oe.toFixed(1).replace(".", ",");
+      caption("DIAGRAMA DE ORBITALES MOLECULARES", sp.n, C.text);
+      text("O.E. = (" + f.b + " − " + f.a + ")/2 = " + oe, 20, 72, 1, C.cyan, 14, "left", 700, MONO);
+      text(f.un ? f.un + " e⁻ desapareado" + (f.un > 1 ? "s" : "") + " · paramagnética" : "diamagnética", 20, 94, .85, f.un ? [255, 190, 110] : C.muted, 12.5, "left");
+      text(sp.kind === "h" ? "" : sp.kind === "mix" ? "con mezcla s–p" : "sin mezcla s–p", 20, 114, .7, C.muted, 12, "left");
+      // OA
+      Object.keys(aoY).forEach(k => {
+        const yl = aoY[k] - off, yr = aoY[k] + off;
+        line(110, yl, 190, yl, C.text, .9, 2.5); line(610, yr, 690, yr, C.text, .9, 2.5);
+        text(Ln + " " + shl + k, 150, yl - 14, .8, C.muted, 12); text(Rn + " " + shl + k, 650, yr - 14, .8, C.muted, 12);
+      });
+      // OM
+      f.lv.forEach((l, li) => {
+        const col = l.b > 0 ? C.pos : [255, 150, 90];
+        const xs = l.deg === 1 ? [[352, 448]] : [[318, 390], [410, 482]];
+        const x0 = xs[0][0], x1 = xs[xs.length - 1][1];
+        line(190, aoY[l.ao] - off, x0, l.y, C.muted, .35, 1, [3, 4]); line(x1, l.y, 610, aoY[l.ao] + off, C.muted, .35, 1, [3, 4]);
+        xs.forEach(([a, b]) => line(a, l.y, b, l.y, col, 1, 3));
+        text(l.id, 300, l.y, .95, col, 13, "right", 700, MONO);
+        text(l.lab, 492, l.y, .6, C.muted, 11.5, "left", 500, MONO);
+        if (li === f.homo) text("HOMO", 548, l.y, .9, [255, 215, 90], 10.5, "left", 700);
+        if (li === f.homo + 1) text("LUMO", 548, l.y, .8, C.cyan, 10.5, "left", 700);
+      });
+      // electrones cayendo
+      const el0 = (time - this.start - .3) / .3;
+      const placed = reduce ? sp.e : clamp(Math.floor(el0), 0, sp.e), frac = el0 - Math.floor(el0);
+      f.slots.slice(0, sp.e).forEach((s, i) => {
+        const l = f.lv[s.li];
+        const cx = l.deg === 1 ? 400 : (s.k === 0 ? 354 : 446);
+        const x = cx + (s.up ? -8 : 8);
+        if (i < placed) spin(x, l.y, s.up, [255, 215, 90]);
+        else if (i === placed && placed < sp.e) { const y = lerp(10, l.y, 1 - Math.pow(1 - frac, 3)); spin(x, y, s.up, [255, 215, 90], frac); }
+      });
+      text("energía ↑", 60, 250, .5, C.muted, 11, "center", 600);
+    }
+  };
+
+  // =====================================================================
+  // 6. Hibridación: cómo se mezclan s y p
+  // =====================================================================
+  const HYB = [["s puro", 1], ["sp", Math.SQRT1_2], ["sp²", 1 / Math.sqrt(3)], ["sp³", .5], ["p puro", 0]];
+  const mHY = {
+    nav: "Hibridación: la mezcla", eyebrow: "Moléculas poliatómicas", title: "Un híbrido es una suma de s y p",
+    body: `<p>La hibridación combina orbitales de un <b>mismo átomo</b>. Donde s y p tienen el mismo signo se suman y el lóbulo crece; donde tienen signo opuesto se restan y queda un lóbulo pequeño detrás.</p>
+      <div class="eq">sp: Ψ = (s ± p)/√2 &nbsp; sp²: Ψ₁ = s/√3 + √(2/3)·p &nbsp; sp³: Ψ = ½(s ± p ± p ± p)</div>
+      <p>Las condiciones de normalización, ortogonalidad y equivalencia fijan los coeficientes: el carácter s de cada híbrido es 1/2, 1/3 o 1/4.</p>`,
+    sel: 1, a: 1,
+    init() { UI.chips("Tipo", HYB.map(h => h[0]), this.sel, i => { this.sel = i; this.fact(); }); this.fact(); },
+    fact() { const a = HYB[this.sel][1]; setFact(`<span><b>${HYB[this.sel][0]}</b> · a² = ${(a * a).toFixed(2)} (carácter s ${Math.round(a * a * 100)} %) · b² = ${(1 - a * a).toFixed(2)} (carácter p ${Math.round((1 - a * a) * 100)} %)</span><span>Cuanto más carácter s, más corto y redondeado el lóbulo principal.</span>`); },
+    draw(dt) {
+      this.a = lerp(this.a, HYB[this.sel][1], reduce ? 1 : 1 - Math.exp(-dt * 3));
+      const a = this.a, b = Math.sqrt(Math.max(0, 1 - a * a));
+      const Ns = .57, Np = .47, k = 1 / 1.4;
+      const s = (x, y) => Ns * Math.exp(-Math.hypot(x, y) * k), p = (x, y) => Np * x * Math.exp(-Math.hypot(x, y) * k);
+      caption("Ψ = a·s + b·p", `${Math.round(a * a * 100)} % s · ${Math.round(b * b * 100)} % p`, C.text);
+      const box = { x: 40, y: 58, w: 720, h: 225 }, world = { x0: -7, x1: 7, y0: -2.19, y1: 2.19 };
+      field((x, y) => a * s(x, y) + b * p(x, y), box, world, { max: .5, gamma: .55 });
+      const [cx, cy] = toS(box, world, 0, 0);
+      sphere(cx, cy, 4, [255, 255, 255]);
+      line(box.x, cy, box.x + box.w, cy, C.muted, .3, 1, [3, 5]);
+      // perfil sobre el eje
+      const pr = { x: 40, y: 300, w: 720, h: 150 };
+      const X = x => pr.x + (x - world.x0) / (world.x1 - world.x0) * pr.w, Y = v => pr.y + pr.h / 2 - v / .55 * (pr.h / 2);
+      line(pr.x, Y(0), pr.x + pr.w, Y(0), C.muted, .5);
+      const plot = (fn, col, w, dash) => { ctx.strokeStyle = rgba(col, 1); ctx.lineWidth = w; ctx.setLineDash(dash || []); ctx.beginPath(); for (let i = 0; i <= 200; i++) { const x = world.x0 + i / 200 * (world.x1 - world.x0); const v = fn(x); i ? ctx.lineTo(X(x), Y(v)) : ctx.moveTo(X(x), Y(v)); } ctx.stroke(); ctx.setLineDash([]); };
+      plot(x => a * s(x, 0), C.cyan, 1.8, [5, 4]);
+      plot(x => b * p(x, 0), C.violet, 1.8, [5, 4]);
+      plot(x => a * s(x, 0) + b * p(x, 0), C.text, 2.5);
+      text("- - a·s", pr.x + 6, pr.y + 6, .9, C.cyan, 12, "left", 700);
+      text("- - b·p", pr.x + 70, pr.y + 6, .9, C.violet, 12, "left", 700);
+      text("— suma = híbrido", pr.x + 136, pr.y + 6, .9, C.text, 12, "left", 700);
+      if (b > .3 && a > .2) { text("se suman", X(1.6), Y(.45), .85, C.pos, 12); text("se restan", X(-1.8), Y(-.2), .85, C.neg, 12); }
+    }
+  };
+
+  // =====================================================================
+  // 7. Geometrías de hibridación (3D)
+  // =====================================================================
+  const s3 = 1 / Math.sqrt(3);
+  const DIRS = {
+    sp: [[1, 0, 0], [-1, 0, 0]],
+    sp2: [[1, 0, 0], [-.5, 0, .866], [-.5, 0, -.866]],
+    sp3: [[s3, s3, s3], [-s3, -s3, s3], [s3, -s3, -s3], [-s3, s3, -s3]],
+    sp3d: [[0, 1, 0], [0, -1, 0], [1, 0, 0], [-.5, 0, .866], [-.5, 0, -.866]],
+    sp3d2: [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]]
+  };
+  const ELC = { H: [230, 230, 240], F: [150, 235, 120], Cl: [80, 220, 130], O: [255, 95, 95], C: [150, 155, 170], N: [100, 140, 255], Be: [200, 200, 150], B: [255, 180, 140], S: [245, 215, 80], P: [255, 150, 60], Xe: [110, 200, 230], I: [170, 100, 220] };
+  const GEO = [
+    ["BeCl₂", "Be", "sp", ["Cl", "Cl"], "Lineal, 180°. Dos híbridos sp; los dos p del Be quedan vacíos."],
+    ["CO₂", "C", "sp", ["O", "O"], "C sp: los dos σ usan los híbridos; los dos p sin hibridar forman dos enlaces π (problema 5)."],
+    ["BF₃", "B", "sp2", ["F", "F", "F"], "Trigonal plana, 120°. El p_z del B queda vacío."],
+    ["SO₂", "S", "sp2", ["O", "O", "LP"], "S sp² con un par solitario: angular (≈119°). El p sin hibridar forma un π deslocalizado."],
+    ["NO₂", "N", "sp2", ["O", "O", "e"], "N sp² con un electrón solo en un híbrido: angular (≈134°), radical."],
+    ["CH₄", "C", "sp3", ["H", "H", "H", "H"], "Tetraédrica, 109,5°."],
+    ["NH₃", "N", "sp3", ["H", "H", "H", "LP"], "Tres enlaces y un par solitario: pirámide trigonal (≈107°)."],
+    ["H₂O", "O", "sp3", ["H", "H", "LP", "LP"], "Dos enlaces y dos pares solitarios: angular (≈104,5°)."],
+    ["IO₄⁻", "I", "sp3", ["O", "O", "O", "O"], "I sp³ para los σ; los enlaces π usan orbitales d del I (problema 5)."],
+    ["PF₅", "P", "sp3d", ["F", "F", "F", "F", "F"], "Bipirámide trigonal: dsp³ (sp³d). 90° y 120°."],
+    ["SF₆", "S", "sp3d2", ["F", "F", "F", "F", "F", "F"], "Octaédrica: d²sp³ (sp³d²), 90°."],
+    ["XeF₄", "Xe", "sp3d2", ["F", "F", "F", "F", "LP", "LP"], "Seis dominios (sp³d²) con dos pares solitarios opuestos: plano cuadrada. XeO₂F₄ también usa 6 híbridos sp³d²."]
+  ];
+  const mGE = {
+    nav: "Hibridación: geometrías", eyebrow: "Moléculas poliatómicas", title: "Cada tipo de híbrido tiene su geometría",
+    body: `<p>El número de híbridos es igual al número de orbitales que se mezclan, y se colocan lo más separados posible:</p>
+      <ul><li><b>sp</b>: 2 híbridos, lineal, 180°</li><li><b>sp²</b>: 3 híbridos, trigonal plana, 120°</li><li><b>sp³</b>: 4 híbridos, tetraédrica, 109,5°</li><li><b>dsp³</b>: 5, bipirámide trigonal</li><li><b>d²sp³</b>: 6, octaédrica</li></ul>
+      <p>Los pares solitarios (en morado) ocupan híbridos pero no se ven en la forma de la molécula. Arrastra la escena para girarla.</p>`,
+    sel: 5, yaw: 0, pitch: -.4, drag: null, paused: false,
+    init() {
+      UI.chips("Ejemplo", GEO.map(g => g[0]), this.sel, i => { this.sel = i; this.fact(); });
+      UI.chips("Giro", ["Girar solo", "Pausar"], this.paused ? 1 : 0, i => { this.paused = i === 1; });
+      this.fact();
+    },
+    fact() { const g = GEO[this.sel]; const hn = { sp: "sp", sp2: "sp²", sp3: "sp³", sp3d: "dsp³ (sp³d)", sp3d2: "d²sp³ (sp³d²)" }[g[2]]; setFact(`<span><b>${g[0]}</b> · átomo central ${g[1]} · híbridos ${hn}</span><span>${g[4]}</span>`); },
+    draw(dt) {
+      if (!this.paused && !this.drag) this.yaw += dt * .45;
+      const g = GEO[this.sel], dirs = DIRS[g[2]];
+      const cx = 400, cy = 250, S = 150;
+      const cyw = Math.cos(this.yaw), syw = Math.sin(this.yaw), cp = Math.cos(this.pitch), spt = Math.sin(this.pitch);
+      const proj = v => { const x1 = v[0] * cyw + v[2] * syw, z1 = -v[0] * syw + v[2] * cyw; const y2 = v[1] * cp - z1 * spt, z2 = v[1] * spt + z1 * cp; return [x1, y2, z2]; };
+      const hn = { sp: "sp", sp2: "sp²", sp3: "sp³", sp3d: "dsp³", sp3d2: "d²sp³" }[g[2]];
+      caption("HÍBRIDOS " + hn.toUpperCase(), g[0], C.text);
+      text({ sp: "180°", sp2: "120°", sp3: "109,5°", sp3d: "90° y 120°", sp3d2: "90°" }[g[2]], 780, 42, .9, C.cyan, 16, "right", 700, MONO);
+      const items = [];
+      dirs.forEach((v, i) => {
+        const [x, y, z] = proj(v), lig = g[3][i];
+        items.push({ z: z * .5 - .01, draw: () => {
+          const m = Math.hypot(x, y), len = S * .82, w = S * .17;
+          const ex = cx + x * len / 2, ey = cy - y * len / 2;
+          const lp = lig === "LP" || lig === "e";
+          const col = lp ? C.violet : C.pos;
+          ctx.save(); ctx.translate(ex, ey); ctx.rotate(Math.atan2(-y, x));
+          ctx.fillStyle = rgba(col, .45 + .25 * z); ctx.strokeStyle = rgba(col, .9); ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.ellipse(0, 0, Math.max(w, m * len / 2), w, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+          if (lp) { const tx = cx + x * len * .78, ty = cy - y * len * .78; const n = lig === "e" ? 1 : 2; for (let k = 0; k < n; k++) { const o = n === 1 ? 0 : (k ? 5 : -5); sphere(tx - y * o / Math.max(m, .3) * .9, ty - x * o / Math.max(m, .3) * .9, 3.4, [255, 230, 120]); } }
+        } });
+        if (lig !== "LP" && lig !== "e") items.push({ z: z, draw: () => {
+          const ax = cx + x * S, ay = cy - y * S, r = 19 * (1 + .15 * z);
+          sphere(ax, ay, r, ELC[lig] || [200, 200, 200]); text(lig, ax, ay + 1, 1, [20, 24, 36], 12, "center", 700);
+        } });
+      });
+      items.push({ z: 0, draw: () => { sphere(cx, cy, 24, ELC[g[1]] || [200, 200, 200]); text(g[1], cx, cy + 1, 1, [20, 24, 36], 13, "center", 700); } });
+      items.sort((p, q) => p.z - q.z).forEach(it => it.draw());
+      text("azul: híbrido que forma enlace σ · morado: par solitario", 400, 462, .7, C.muted, 12);
+    }
+  };
+
+  // =====================================================================
+  // 8. Deslocalización: resonancia
+  // =====================================================================
+  const RES = [
+    { n: "CO₃²⁻", c: "C", t: ["O", "O", "O"], ang: [90, 210, 330], bo: [[2, 1, 1], [1, 2, 1], [1, 1, 2]], qc: [0, 0, 0], qt: [[0, -1, -1], [-1, 0, -1], [-1, -1, 0]], hb: "1⅓", hq: "−⅔", hc: "", note: "Los tres C–O son iguales: cada uno tiene orden 1⅓ y cada O carga −⅔ (a = b = c)." },
+    { n: "O₃", c: "O", t: ["O", "O"], ang: [210, 330], bo: [[2, 1], [1, 2]], qc: [1, 1], qt: [[0, -1], [-1, 0]], hb: "1½", hq: "−½", hc: "+", note: "Los dos enlaces O–O miden lo mismo (orden 1½)." },
+    { n: "SO₃", c: "S", t: ["O", "O", "O"], ang: [90, 210, 330], bo: [[2, 1, 1], [1, 2, 1], [1, 1, 2]], qc: [2, 2, 2], qt: [[0, -1, -1], [-1, 0, -1], [-1, -1, 0]], hb: "1⅓", hq: "−⅔", hc: "2+", note: "Con regla del octeto. Si se admite octeto expandido, la forma con tres S=O (cargas 0) también contribuye." },
+    { n: "NO₂", c: "N", t: ["O", "O"], ang: [210, 330], bo: [[2, 1], [1, 2]], qc: [1, 1], qt: [[0, -1], [-1, 0]], hb: "1½", hq: "−½", hc: "+", rad: true, note: "Radical: el electrón desapareado está sobre el N en las dos formas." },
+    { n: "ClO₃⁻", c: "Cl", t: ["O", "O", "O"], ang: [90, 210, 330], bo: [[2, 2, 1], [2, 1, 2], [1, 2, 2]], qc: [0, 0, 0], qt: [[0, 0, -1], [0, -1, 0], [-1, 0, 0]], hb: "1⅔", hq: "−⅓", hc: "", note: "Formas con octeto expandido que minimizan las cargas formales. La molécula real es piramidal (par solitario en el Cl); aquí se dibuja plana para ver los enlaces." }
+  ];
+  const ECOL = { O: [255, 95, 95], C: [150, 155, 170], N: [100, 140, 255], S: [245, 215, 80], Cl: [80, 220, 130] };
+  const qs = q => q === 0 ? "" : q === 1 ? "+" : q === -1 ? "−" : q > 0 ? q + "+" : (-q) + "−";
+  const mRE = {
+    nav: "Resonancia", eyebrow: "Deslocalización", title: "Estructuras de resonancia e híbrido",
+    body: `<p>Cuando hay varias estructuras de Lewis válidas, la molécula real no es ninguna: es un <b>híbrido de resonancia</b>, una combinación lineal de todas.</p>
+      <div class="eq">Ψ = aΨ_I + bΨ_II + cΨ_III</div>
+      <p>Si las estructuras tienen la misma energía, contribuyen igual (a = b = c) y los enlaces quedan equivalentes: el enlace π está deslocalizado. Una estructura contribuye más cuanto más enlaces tiene, cuanto más razonables son sus cargas y si respeta la posición de los átomos.</p>`,
+    sel: 0, start: 0,
+    init() { this.start = time; UI.chips("Molécula (problema 3)", RES.map(r => r.n), this.sel, i => { this.sel = i; this.start = time; this.fact(); }); this.fact(); },
+    fact() { const r = RES[this.sel]; setFact(`<span><b>${r.n}</b> · ${r.bo.length} estructuras equivalentes · orden de enlace ${r.hb}</span><span>${r.note}</span>`); },
+    weights(r) {
+      const n = r.bo.length, st = 2.2, tot = n * st + 3.6, ph = reduce ? n * st + 1 : (time - this.start) % tot;
+      const w = Array(n).fill(0); let h = 0;
+      if (ph < n * st) {
+        const i = Math.floor(ph / st), l = ph - i * st, f = ease(seg(l, 1.6, 2.2));
+        w[i] = 1 - f; if (i + 1 < n) w[i + 1] = f; else h = f;
+      } else { const l = ph - n * st; h = 1 - ease(seg(l, 3, 3.6)); w[0] = 1 - h; }
+      return { w, h };
+    },
+    mol(r, cx, cy, L, sc, w, h, alpha = 1) {
+      const R = 22 * sc;
+      const pts = r.ang.map(a => [cx + Math.cos(a * Math.PI / 180) * L, cy - Math.sin(a * Math.PI / 180) * L]);
+      pts.forEach(([x, y], i) => {
+        const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy), ux = dx / d, uy = dy / d, nx = -uy * 11 * sc, ny = ux * 11 * sc;
+        const x0 = cx + ux * R, y0 = cy + uy * R, x1 = x - ux * R, y1 = y - uy * R;
+        const extra = w.reduce((s, wi, k) => s + wi * (r.bo[k][i] - 1), 0);
+        line(x0 - nx * .5 * Math.min(1, extra + h), y0 - ny * .5 * Math.min(1, extra + h), x1 - nx * .5 * Math.min(1, extra + h), y1 - ny * .5 * Math.min(1, extra + h), C.text, alpha, 2.4 * sc);
+        if (extra > .01) { line(x0 + nx * .5, y0 + ny * .5, x1 + nx * .5, y1 + ny * .5, [255, 215, 90], alpha * Math.min(1, extra), 2.4 * sc); if (sc > .8) glow((x0 + x1) / 2, (y0 + y1) / 2, 34, [255, 215, 90], .22 * Math.min(1, extra)); }
+        if (h > .01) line(x0 + nx * .5, y0 + ny * .5, x1 + nx * .5, y1 + ny * .5, [255, 215, 90], alpha * h, 2 * sc, [5 * sc, 4 * sc]);
+      });
+      pts.forEach(([x, y], i) => {
+        sphere(x, y, R, ECOL[r.t[i]] || [200, 200, 200], alpha); text(r.t[i], x, y + 1, alpha, [20, 24, 36], 13 * sc, "center", 700);
+        w.forEach((wi, k) => { const q = qs(r.qt[k][i]); if (q && wi > .01) text(q, x + R * .95, y - R * .95, alpha * wi, [255, 215, 90], 15 * sc, "center", 700); });
+        if (h > .01) text(r.hq, x + R * 1.25, y - R * .95, alpha * h, [255, 215, 90], 14 * sc, "center", 700);
+      });
+      sphere(cx, cy, R, ECOL[r.c] || [200, 200, 200], alpha); text(r.c, cx, cy + 1, alpha, [20, 24, 36], 13 * sc, "center", 700);
+      const cq = qs(r.qc[0]);
+      if (cq) text(cq, cx + R * .95, cy - R * .95, alpha, [255, 215, 90], 15 * sc, "center", 700);
+      if (r.rad) sphere(cx, cy - R - 6 * sc, 3.5 * sc, [255, 230, 120], alpha);
+    },
+    draw() {
+      const r = RES[this.sel], { w, h } = this.weights(r);
+      const cur = h > .5 ? -1 : w.indexOf(Math.max(...w));
+      caption("DESLOCALIZACIÓN DEL ENLACE π", r.n + " · " + (cur < 0 ? "híbrido de resonancia" : "estructura " + ["I", "II", "III"][cur]), cur < 0 ? [255, 215, 90] : C.text);
+      this.mol(r, 400, r.t.length === 2 ? 170 : 205, 118, 1, w, h);
+      if (h > .5) text("enlace π repartido: orden " + r.hb + " en cada enlace", 400, 322, h, [255, 215, 90], 14, "center", 700);
+      // miniaturas
+      const n = r.bo.length, gap = 150, x0 = 400 - (n * gap) / 2 + gap / 2 - 40;
+      for (let k = 0; k < n; k++) {
+        const x = x0 + k * gap, on = cur === k;
+        const ww = Array(n).fill(0); ww[k] = 1;
+        this.mol(r, x, 405, 40, .5, ww, 0, on ? 1 : .45);
+        text(["I", "II", "III"][k], x, 458, on ? 1 : .5, C.text, 12, "center", 700);
+        if (k < n - 1) text("↔", x + gap / 2, 405, .6, C.muted, 18);
+      }
+      const hx = x0 + n * gap;
+      text("≡", hx - gap / 2 + 20, 405, .6, C.muted, 20);
+      this.mol(r, hx + 10, 405, 40, .5, Array(n).fill(0), 1, cur < 0 ? 1 : .45);
+      text("híbrido", hx + 10, 458, cur < 0 ? 1 : .5, [255, 215, 90], 12, "center", 700);
+    }
+  };
+
+  // =====================================================================
+  // 9. Teoría de grupos: H₂O
+  // =====================================================================
+  const OPS = [["E", 2], ["C₂", 0], ["σv(xz)", 2], ["σ'v(yz)", 0]];
+  const mGT = {
+    nav: "Teoría de grupos (H₂O)", eyebrow: "Teoría de grupos aplicada a los OM", title: "Orbitales del agua por simetría (C₂v)",
+    body: `<p>Pasos: identificar el grupo puntual (C₂v), aplicar cada operación a los orbitales 1s de los H y contar: vale 1 si el orbital queda en su sitio, 0 si se mueve, −1 si queda en su sitio con el signo cambiado.</p>
+      <p>Aplica las cuatro operaciones. La representación Γ = (2, 0, 2, 0) se reduce a <b>A₁ + B₁</b>: las combinaciones (SALC) φa + φb y φa − φb.</p>
+      <ul><li>A₁ (φa + φb) se combina con 2s y 2p_z del O → Ψ₁ enlazante, Ψ₃ casi no enlazante, Ψ₅ antienlazante.</li><li>B₁ (φa − φb) se combina con 2p_x → Ψ₂ enlazante y Ψ₆ antienlazante.</li><li>2p_y (B₂) no encuentra pareja → Ψ₄ no enlazante.</li></ul>`,
+    op: -1, opStart: 0, done: [false, false, false, false], salc: 0,
+    init() {
+      this.op = -1; this.salc = 0;
+      UI.chips("Aplicar operación", OPS.map(o => o[0]), -1, i => { this.op = i; this.opStart = time; this.salc = 0; this.done[i] = true; ctrl.querySelectorAll('button[data-g="salc"]').forEach(b => b.classList.remove("on")); this.fact(); });
+      UI.chips("Combinaciones adaptadas a la simetría", ["Ninguna", "A₁: φa + φb", "B₁: φa − φb", "B₂: p_y del O"], 0, i => { this.salc = i; this.op = -1; this.fact(); }, "salc");
+      UI.chips("", ["Reiniciar tabla"], -1, () => { this.done = [false, false, false, false]; this.op = -1; this.fact(); });
+      this.fact();
+    },
+    fact() {
+      const n = this.done.filter(Boolean).length;
+      let h = n < 4 ? `<span>Operaciones aplicadas: <b>${n} de 4</b>.</span>` : `<span><b>Γ = 2 0 2 0</b> → n(A₁) = ¼(2+0+2+0) = 1 · n(B₁) = ¼(2−0+2−0) = 1 · n(A₂) = n(B₂) = 0</span><span>Γ = A₁ + B₁</span>`;
+      if (this.op >= 0) h = `<span><b>${OPS[this.op][0]}</b> · χ = ${OPS[this.op][1]} · ${["no mueve nada", "rota 180° e intercambia los H", "el plano de la molécula: los H no se mueven", "refleja por el plano perpendicular: intercambia los H"][this.op]}.</span>` + h;
+      if (this.salc) h = `<span>${["", "A₁: los dos 1s en fase se combinan con 2s y 2p_z del O.", "B₁: los 1s con fases opuestas coinciden con los lóbulos del 2p_x.", "B₂: el 2p_y es perpendicular al plano; no tiene SALC de los H con su simetría y queda no enlazante."][this.salc]}</span>` + h;
+      setFact(h);
+    },
+    draw() {
+      const O = [230, 190], hx = 108, hy = 78;
+      const t = time - this.opStart, p = this.op >= 0 ? ease(seg(t, .2, 1.6)) : 0;
+      caption("GRUPO PUNTUAL C₂v", this.op >= 0 ? "Operación " + OPS[this.op][0] : this.salc ? ["", "SALC A₁", "SALC B₁", "Orbital B₂"][this.salc] : "Molécula de H₂O", C.text);
+      line(O[0], 76, O[0], 380, C.muted, .5, 1, [4, 5]); text("z (C₂)", O[0], 66, .7, C.muted, 11.5);
+      // planos
+      if (this.op === 2) { ctx.fillStyle = rgba(C.cyan, .1 * Math.sin(Math.PI * clamp(t / 1.8))); ctx.fillRect(40, 80, 380, 300); text("plano xz = plano de la molécula", O[0], 395, .9, C.cyan, 12); }
+      if (this.op === 3) { ctx.fillStyle = rgba(C.cyan, .16); ctx.beginPath(); ctx.moveTo(O[0] - 16, 96); ctx.lineTo(O[0] + 16, 80); ctx.lineTo(O[0] + 16, 350); ctx.lineTo(O[0] - 16, 366); ctx.closePath(); ctx.fill(); text("plano yz (⟂ a la molécula)", O[0], 395, .9, C.cyan, 12); }
+      if (this.op === 1) { ctx.strokeStyle = rgba(C.cyan, .8); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(O[0], 90, 28, 8, 0, Math.PI * .1, Math.PI * .1 + TAU * .8 * p + .01); ctx.stroke(); text("180°", O[0] + 40, 90, .8, C.cyan, 11.5, "left"); }
+      if (this.op === 0) glow(O[0], O[1] + 30, 150, C.cyan, .15 * Math.sin(Math.PI * clamp(t / 1.6)));
+      // posiciones de los H
+      let xa = -hx, xb = hx, sa = 1, sb = 1;
+      if (this.op === 1) { const ang = Math.PI * p; xa = -hx * Math.cos(ang); xb = hx * Math.cos(ang); sa = 1 + .2 * Math.sin(ang); sb = 1 - .2 * Math.sin(ang); }
+      if (this.op === 3) { xa = -hx * (1 - 2 * p); xb = hx * (1 - 2 * p); }
+      // orbital del O
+      const lobe = (x, y, ang, col) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.fillStyle = rgba(col, .55); ctx.strokeStyle = rgba(col, .95); ctx.beginPath(); ctx.ellipse(34, 0, 34, 20, 0, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); };
+      if (this.salc === 1) { ctx.fillStyle = rgba(C.pos, .3); ctx.beginPath(); ctx.arc(O[0], O[1], 40, 0, TAU); ctx.fill(); lobe(O[0], O[1], Math.PI / 2, C.pos); lobe(O[0], O[1], -Math.PI / 2, C.neg); text("2s + 2p_z", O[0] + 50, O[1] - 30, .9, C.text, 12, "left"); }
+      if (this.salc === 2) { lobe(O[0], O[1], Math.PI, C.pos); lobe(O[0], O[1], 0, C.neg); text("2p_x", O[0] + 72, O[1] - 26, .9, C.text, 12, "left"); }
+      if (this.salc === 3) { ctx.strokeStyle = rgba(C.violet, .9); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(O[0], O[1], 30, 0, TAU); ctx.stroke(); sphere(O[0], O[1], 6, C.violet); text("2p_y sale de la pantalla", O[0] + 40, O[1] - 30, .9, C.violet, 12, "left"); }
+      // enlaces
+      line(O[0], O[1], O[0] + xa, O[1] + hy, C.text, .5, 3); line(O[0], O[1], O[0] + xb, O[1] + hy, C.text, .5, 3);
+      const Hs = [[xa, sa, "a"], [xb, sb, "b"]].sort((u, v) => u[1] - v[1]);
+      Hs.forEach(([x, s, n]) => {
+        let col = n === "a" ? [80, 220, 200] : [255, 130, 190];
+        if (this.salc === 1) col = C.pos; if (this.salc === 2) col = n === "a" ? C.pos : C.neg; if (this.salc === 3) col = [140, 150, 170];
+        glow(O[0] + x, O[1] + hy, 44 * s, col, .35); sphere(O[0] + x, O[1] + hy, 18 * s, col);
+        text("φ" + n, O[0] + x, O[1] + hy + 1, 1, [20, 24, 36], 13, "center", 700);
+      });
+      sphere(O[0], O[1], 24, [255, 95, 95]); text("O", O[0], O[1] + 1, 1, [20, 24, 36], 14, "center", 700);
+      if (this.op >= 0 && t > 1.6) text("χ = " + OPS[this.op][1], O[0], 432, clamp((t - 1.6) * 3), [255, 215, 90], 22, "center", 700, MONO);
+      // tabla de caracteres
+      const tx = 470, ty = 110, cw = 70, rh = 34;
+      text("C₂v", tx, ty, 1, C.text, 14, "left", 700, MONO);
+      OPS.forEach((o, i) => text(o[0], tx + 90 + i * cw, ty, .9, C.muted, 12, "center", 700, MONO));
+      line(tx, ty + 16, tx + 90 + 3.6 * cw, ty + 16, C.muted, .5);
+      const rows = [["Γ", OPS.map((o, i) => this.done[i] ? String(o[1]) : "·"), [255, 215, 90]], ["A₁", ["1", "1", "1", "1"], C.pos], ["A₂", ["1", "1", "−1", "−1"], C.muted], ["B₁", ["1", "−1", "1", "−1"], C.pos], ["B₂", ["1", "−1", "−1", "1"], C.muted]];
+      const all = this.done.every(Boolean);
+      rows.forEach(([n, v, col], r) => {
+        const y = ty + 36 + r * rh, a = r === 0 ? 1 : all ? (n === "A₁" || n === "B₁" ? 1 : .35) : .55;
+        if (r === 1) line(tx, y - rh / 2, tx + 90 + 3.6 * cw, y - rh / 2, C.muted, .3);
+        text(n, tx, y, a, r === 0 ? col : C.text, 14, "left", 700, MONO);
+        v.forEach((s, i) => text(s, tx + 90 + i * cw, y, a, r === 0 ? col : C.text, 14, "center", 600, MONO));
+      });
+      if (all) { text("Γ = A₁ + B₁", tx + 150, ty + 36 + 5 * rh + 6, 1, [255, 215, 90], 18, "center", 700, MONO); text("SALC: φa + φb (A₁) y φa − φb (B₁)", tx + 150, ty + 36 + 5 * rh + 32, .85, C.muted, 12.5); }
+      else text("aplica las 4 operaciones para completar Γ", tx + 150, ty + 36 + 5 * rh + 6, .7, C.muted, 12.5);
+    }
+  };
+
+  // ---------- navegación ----------
+  const M = [mEV, mOM, mOV, mSPD, mDI, mHY, mGE, mRE, mGT];
+  let cur = 0, last = performance.now();
+  const tabs = $("tabs");
+  M.forEach((m, i) => { const b = document.createElement("button"); b.type = "button"; b.textContent = (i + 1) + " · " + m.nav; b.addEventListener("click", () => go(i)); tabs.appendChild(b); });
+  function go(i) {
+    cur = clamp(i, 0, M.length - 1);
+    const m = M[cur];
+    $("eyebrow").textContent = `${cur + 1} de ${M.length} · ${m.eyebrow}`;
+    $("title").textContent = m.title;
+    $("body").innerHTML = m.body;
+    UI.clear(); setFact(""); m.init();
+    [...tabs.children].forEach((b, k) => b.classList.toggle("on", k === cur));
+    $("prev").disabled = cur === 0; $("next").disabled = cur === M.length - 1;
+    try { if (history.replaceState) history.replaceState(null, "", "#a" + (cur + 1)); } catch (e) {}
+  }
+  $("prev").addEventListener("click", () => go(cur - 1));
+  $("next").addEventListener("click", () => go(cur + 1));
+
+  // arrastrar para girar (geometrías)
+  cv.addEventListener("pointerdown", e => { if (M[cur] === mGE) { mGE.drag = [e.clientX, e.clientY]; cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } });
+  cv.addEventListener("pointermove", e => { if (mGE.drag && M[cur] === mGE) { mGE.yaw += (e.clientX - mGE.drag[0]) * .01; mGE.pitch = clamp(mGE.pitch + (e.clientY - mGE.drag[1]) * .01, -1.4, 1.4); mGE.drag = [e.clientX, e.clientY]; } });
+  const up = () => { mGE.drag = null; };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+
+  function frame(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now; time = now / 1000;
+    bg();
+    M[cur].draw(dt);
+    requestAnimationFrame(frame);
+  }
+  const h = (location.hash.match(/^#a(\d)$/) || [])[1];
+  time = performance.now() / 1000;
+  go(h ? +h - 1 : 0);
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
